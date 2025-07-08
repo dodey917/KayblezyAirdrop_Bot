@@ -6,9 +6,9 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
-    Filters,
     CallbackContext,
-    ConversationHandler
+    ConversationHandler,
+    filters  # Changed from Filters to filters
 )
 
 # Set up logging
@@ -70,7 +70,7 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             TASKS: [CallbackQueryHandler(completed, pattern='^completed$')],
-            WALLET: [MessageHandler(Filters.text & ~Filters.command, wallet)],
+            WALLET: [MessageHandler(filters.TEXT & ~filters.COMMAND, wallet)],  # Fixed filters usage
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
