@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+import os
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -17,9 +18,14 @@ from telegram.ext import (
     ConversationHandler
 )
 
-# ===== Configuration =====
-BOT_TOKEN = "7705705814:AAG5R0uOm-ZJfFzi32i2xE1vnl-3QVc9ETs"
-ADMIN_USER_ID = "5584801763"  # For admin notifications
+# Get environment variables
+BOT_TOKEN = os.environ.get('7705705814:AAG5R0uOm-ZJfFzi32i2xE1vnl-3QVc9ETs')
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN environment variable not set")
+
+ADMIN_USER_ID = os.environ.get('5584801763')
+if not ADMIN_USER_ID:
+    raise RuntimeError("ADMIN_USER_ID environment variable not set")
 
 # Conversation states
 VERIFY_SOCIALS, GET_WALLET = range(2)
@@ -79,17 +85,19 @@ def start(update: Update, context: CallbackContext) -> int:
 
     return VERIFY_SOCIALS
 
-def handle_verification(update: Update, context: CallbackContext) -> None:
+def handle_verification(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
+    query.answer()
     user = query.from_user
 
     if query.data == 'completed_tasks':
         # Send congratulations message
-        query.message.reply_text(
-            "🎉 *CONGRATULATIONS!*\n\n"
-            "You've passed Mr Kayblezzy2's airdrop call!\n"
-            "*100 SOL will be sent to your wallet* 💰\n\n"
-            "Please submit your Solana wallet address now:",
+        context.bot.send_message(
+            chat_id=user.id,
+            text="🎉 *CONGRATULATIONS!*\n\n"
+                 "You've passed Mr Kayblezzy2's airdrop call!\n"
+                 "*100 SOL will be sent to your wallet* 💰\n\n"
+                 "Please submit your Solana wallet address now:",
             parse_mode='Markdown'
         )
         
@@ -99,12 +107,12 @@ def handle_verification(update: Update, context: CallbackContext) -> None:
             text="👇 Enter your Solana wallet address:",
             reply_markup=ReplyKeyboardMarkup(
                 [[KeyboardButton("Cancel")]], 
-                one_time_keyboard=True
+                one_time_keyboard=True,
+                resize_keyboard=True
             )
         )
         return GET_WALLET
-    else:
-        query.answer("Please complete all tasks first!")
+    return VERIFY_SOCIALS
 
 def handle_wallet(update: Update, context: CallbackContext) -> int:
     user = update.effective_user
@@ -169,7 +177,7 @@ def export_data(update: Update, context: CallbackContext) -> None:
         csv_data += f"{user[0]},{user[1]},{user[2] or ''},{user[3]}\n"
     
     context.bot.send_document(
-        chat_id=ADMIN_USER_ID,
+        chat_id=update.effective_chat.id,
         document=csv_data.encode(),
         filename='airdrop_participants.csv'
     )
